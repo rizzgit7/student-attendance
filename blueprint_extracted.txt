@@ -1,0 +1,281 @@
+
+===== PAGE 1 =====
+
+Student Attendance — Final End-to-End Blueprint
+Commercial Android APK + free web launch + PC dashboard + Flask API + PostgreSQL. Designed for direct APK distribution
+without Play Store.
+1. Final Product Goal
+Commercial Student Attendance product for schools, colleges and training institutions.
+Primary mechanism: teacher generates a short-lived 6-digit attendance code; students enter that code in the Android app.
+Distribution: Android APK downloaded directly from your free web launch page. No Play Store is required.
+PC use: institution administrators and teachers can use the web dashboard. The core student experience remains mobile.
+Recommended V1 target: Android first. iOS can be added later.
+2. Zero/Low-Cost Launch Architecture
+Launch page: Vercel Hobby plan or another free static hosting option, using a free provider URL such as a Vercel subdomain
+initially.
+Source control: GitHub Free.
+APK: signed release APK linked from the launch page.
+Backend: Flask REST API on a free/low-cost backend service that supports Python web applications. Choose the provider at
+deployment time based on current free-tier limits.
+Database: PostgreSQL on a free/low-cost managed PostgreSQL provider where available.
+Important: free tiers can change or sleep. For a real paying institution, move the API/database to paid production infrastructure
+before promising SLA-level reliability.
+Do not store passwords, secrets or the production database in the website repository.
+3. System Architecture
+Student Android App → HTTPS → Flask REST API → PostgreSQL.
+Teacher Android App for attendance session creation → same Student product API → PostgreSQL.
+PC Admin/Teacher Dashboard → HTTPS → Flask REST API → PostgreSQL.
+Vercel hosts the public launch/download page and can host a separate admin web frontend. It is not the database.
+4. Technology Stack
+Android app
+ Flutter + Dart.
+ Riverpod for state management.
+ Dio for HTTP.
+ go_router for navigation.
+ flutter_secure_storage for tokens.
+ intl for dates/times.
+ connectivity_plus for network status.
+Backend
+ Python.
+ Flask REST API.
+ SQLAlchemy/Flask-SQLAlchemy.
+ Flask-Migrate/Alembic.
+
+
+===== PAGE 2 =====
+
+ JWT access/refresh tokens.
+ Werkzeug/Argon2/bcrypt password hashing.
+ Request validation.
+ Rate limiting.
+ Pytest.
+ Gunicorn where supported.
+Database
+ PostgreSQL.
+PC dashboard
+ HTML/CSS/JavaScript/Bootstrap for a lean V1, or React if your team already knows it.
+Deployment
+ GitHub for source control.
+ Vercel for public web/download/admin frontend where appropriate.
+ Separate backend and PostgreSQL hosting.
+5. Roles
+Super Admin
+Institution Admin
+HOD/Academic Admin
+Teacher
+Student
+Optional Parent
+6. Academic Data Model
+Institution → Academic Year → Program/Course/Grade → Class/Year/Semester → Section → Subject → Teacher Assignment
+→ Attendance Session → Attendance Records.
+Each institution is isolated by institution_id.
+7. Core Database Tables
+institutions
+academic_years
+programs
+classes
+sections
+subjects
+users
+teachers
+students
+parents
+parent_students
+subject_assignments
+attendance_sessions
+
+
+===== PAGE 3 =====
+
+attendance_records
+leaves
+audit_logs
+subscriptions
+notifications
+8. Student App Screens
+Splash.
+Login.
+Home/today's classes.
+Enter attendance code.
+Attendance result.
+Attendance history.
+Subject-wise attendance.
+Attendance percentage.
+Leave request/history.
+Profile/settings.
+Logout.
+9. Teacher Attendance Screens
+Teacher login.
+Dashboard.
+Select class.
+Select section.
+Select subject.
+Start attendance.
+6-digit code with countdown.
+Live present/late count.
+Close session.
+Session history.
+Correction workflow.
+Reports.
+10. Attendance Session Algorithm
+Teacher selects class + section + subject.
+Backend creates a session using server time.
+Backend generates a cryptographically random 6-digit code.
+Code expires/rotates after approximately 30–60 seconds.
+Student sends authenticated request containing the code and session information.
+Backend validates institution, class/section membership, session state, code and time window.
+Backend checks duplicate attendance using both application logic and a database uniqueness constraint.
+Backend assigns PRESENT or LATE according to institution policy.
+Backend records timestamp using server time.
+
+
+===== PAGE 4 =====
+
+Teacher sees live count and can close the session.
+Corrections require a reason and audit record.
+11. Suggested Timing Policy
+Example only: class start 9:00 AM; 9:00–9:10 PRESENT; 9:10–9:20 LATE; after cutoff student self-check-in closes.
+All timing values should be configurable by institution.
+Server time is authoritative; never trust the student's device clock.
+12. Anti-Proxy Controls
+Authenticated student account.
+Correct institution/class/section.
+Active attendance session.
+Short-lived random code.
+Server timestamp.
+Duplicate prevention.
+Rate limiting on code attempts.
+Optional check-in proximity/location later.
+Audit trail for corrections.
+Do not advertise the system as fraud-proof.
+13. Main API
+POST /auth/login
+POST /auth/refresh
+POST /auth/logout
+GET /student/dashboard
+GET /student/classes
+POST /attendance/check-in
+GET /attendance/today
+GET /attendance/history
+POST /teacher/sessions
+GET /teacher/sessions/{id}
+POST /teacher/sessions/{id}/close
+POST /leave/requests
+GET /leave/requests
+POST /admin/students
+POST /admin/teachers
+POST /admin/classes
+POST /admin/subjects
+POST /admin/attendance/{id}/correct
+GET /reports/*
+14. Flutter Project
+student_attendance_app/lib/core/ — config, networking, storage, routing, errors.
+
+
+===== PAGE 5 =====
+
+student_attendance_app/lib/features/auth/.
+student_attendance_app/lib/features/home/.
+student_attendance_app/lib/features/attendance/.
+student_attendance_app/lib/features/history/.
+student_attendance_app/lib/features/leave/.
+student_attendance_app/lib/features/profile/.
+student_attendance_app/lib/models/.
+student_attendance_app/lib/services/.
+student_attendance_app/lib/widgets/.
+android/, ios/, test/.
+15. Flask Project
+student_attendance_api/app/models/.
+auth/.
+student/.
+teacher/.
+attendance/.
+admin/.
+reports/.
+leave/.
+api/.
+utils/.
+migrations/.
+tests/.
+scripts/.
+.env
+.env.example
+requirements.txt
+run.py
+16. Security
+HTTPS only in production.
+JWT access/refresh token lifecycle.
+Secure token storage in Flutter.
+Strong password hashing.
+Role-based authorization.
+Tenant isolation.
+Rate limiting.
+Database constraints.
+Audit logs.
+Minimal personal data.
+Backups.
+
+
+===== PAGE 6 =====
+
+Secrets only in environment variables.
+17. Testing
+Valid/invalid/expired code.
+Wrong class/section.
+Duplicate submission.
+Late window.
+Closed session.
+Two students submitting simultaneously.
+Network interruption.
+Unauthorized API access.
+Cross-institution access attempt.
+Token expiry.
+Admin correction audit.
+Android device testing.
+18. Build Order
+1. Git repositories and branching strategy.
+2. Flutter + Android SDK setup.
+3. Flask skeleton.
+4. PostgreSQL schema and migrations.
+5. Authentication.
+6. Institution/master data.
+7. Teacher session creation.
+8. Code generation/expiry.
+9. Student check-in.
+10. Attendance history/reports.
+11. Leave.
+12. Admin dashboard.
+13. Security hardening.
+14. Testing.
+15. APK signing.
+16. Deployment.
+17. Pilot institution.
+19. Free Web Launch
+Create a public Vercel project.
+Add product landing page.
+Add Download APK button.
+Add Admin Login button.
+Add support/privacy/terms pages.
+Upload or serve the signed APK using a suitable file host/object storage rather than relying on a web repository as a long-term
+binary store.
+
+
+===== PAGE 7 =====
+
+Use a free Vercel subdomain initially; buy a custom domain only after product validation.
+20. Production Release Checklist
+Signed APK.
+Version number.
+Privacy policy.
+Terms.
+Support email/contact.
+Production database backup.
+API HTTPS.
+Environment secrets.
+Error logging.
+Migration tested.
+Admin account secured.
+Demo data removed.
+Recovery plan.
+Install/update instructions.
+

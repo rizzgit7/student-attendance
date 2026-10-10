@@ -1,0 +1,7 @@
+# Keep the deployment bundle lean; the Flutter sources are not runtime code.
+student_attendance_app/
+**/__pycache__/
+instance/
+*.log
+.pytest_cache/
+.vercel/

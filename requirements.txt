@@ -1,0 +1,8 @@
+# Vercel installs Python dependencies from this file (serverless function).
+Flask>=3.1
+Flask-SQLAlchemy>=3.1
+Flask-Migrate>=4.0
+PyJWT>=2.8
+Werkzeug>=3.0
+python-dotenv>=1.0
+psycopg2-binary>=2.9

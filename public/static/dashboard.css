@@ -1,0 +1,5 @@
+/* Dashboard tweaks */
+.card { border-radius: .75rem; }
+.navbar .nav-link.active { font-weight: 600; }
+#live-code { letter-spacing: .35rem; font-family: ui-monospace, monospace; }
+.table td, .table th { vertical-align: middle; }
