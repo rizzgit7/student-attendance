@@ -25,7 +25,9 @@ if _BASE not in sys.path:
 if not os.environ.get("DATABASE_URL"):
     # Ephemeral fallback so the function still boots without configuration;
     # configure managed PostgreSQL in Vercel before serving real traffic.
-    os.environ["DATABASE_URL"] = "sqlite:////tmp/attendance.db"
+    import tempfile
+    _fallback_db = os.path.join(tempfile.gettempdir(), "attendance.db")
+    os.environ["DATABASE_URL"] = f"sqlite:///{_fallback_db}"
     print(
         "WARNING: DATABASE_URL is not set — using ephemeral SQLite in /tmp. "
         "Data will be lost between deployments.",
