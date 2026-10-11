@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(auth|attendance|student|teacher|admin|reports)",
+      "source": "/(.*)",
       "destination": "/api/index"
     }
   ],

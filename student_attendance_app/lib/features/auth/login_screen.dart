@@ -35,10 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .login(_email.text, _password.text);
       // router redirect handles navigation on success
     } catch (e) {
-      final appEx = e is Exception && e.toString().contains('Request failed')
-          ? e
-          : e;
-      setState(() => _error = appEx.toString());
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }

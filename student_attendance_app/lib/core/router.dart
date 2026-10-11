@@ -16,13 +16,14 @@ import '../features/teacher/teacher_home_screen.dart';
 import '../services/auth_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authProvider);
-
-  return GoRouter(
+  // Do NOT watch authProvider here — recreating the whole GoRouter on every
+  // auth change resets navigation and visibly "flashes" the login screen.
+  // _AuthRefresh already notifies go_router to re-run the redirect below.
+  final router = GoRouter(
     initialLocation: '/login',
     refreshListenable: _AuthRefresh(ref),
     redirect: (context, state) {
-      final user = auth.valueOrNull;
+      final user = ref.read(authProvider).valueOrNull;
       final loggingIn = state.matchedLocation == '/login';
       if (user == null) return loggingIn ? null : '/login';
       if (loggingIn) return user.isStaff ? '/teacher' : '/home';
@@ -74,6 +75,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.onDispose(router.dispose);
+  return router;
 });
 
 /// Bridges Riverpod state changes into go_router's refresh mechanism.

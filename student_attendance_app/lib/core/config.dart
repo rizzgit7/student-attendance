@@ -5,6 +5,8 @@
 class AppConfig {
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://10.0.2.2:5000', // Android emulator → host machine
+    // Production API (Vercel). For local dev, override at build time:
+    //   flutter run --dart-define=BASE_URL=http://10.0.2.2:5000
+    defaultValue: 'https://student-attendance.vercel.app',
   );
 }
