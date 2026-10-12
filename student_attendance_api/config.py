@@ -5,6 +5,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _normalize_db_url(url):
+    """Map provider connection strings onto the dialect we actually install.
+
+    Managed providers (Timescale/Tiger Cloud, Heroku, many others) hand out
+    ``postgres://`` strings, which SQLAlchemy 2.x removed — passing one
+    straight through raises ``NoSuchModuleError: Can't load plugin:
+    sqlalchemy.dialects:postgres``. Renaming it to plain ``postgresql://``
+    then picks SQLAlchemy's *default* driver, which as of 2.1 is psycopg3,
+    while requirements.txt ships psycopg2-binary. Pin ``+psycopg2`` so local
+    runs and the Vercel build resolve the same installed driver.
+    """
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg2://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + url[len("postgresql://"):]
+    return url
+
+
 class Config:
     """Base configuration.
 
@@ -17,8 +35,10 @@ class Config:
     JWT_ACCESS_SECONDS = int(os.environ.get("JWT_ACCESS_SECONDS", 900))
     JWT_REFRESH_SECONDS = int(os.environ.get("JWT_REFRESH_SECONDS", 604800)
                               )
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "sqlite:///attendance.db"
+    SQLALCHEMY_DATABASE_URI = (
+        _normalize_db_url(
+            os.environ.get("DATABASE_URL", "sqlite:///attendance.db")
+        )
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Robust against serverless cold starts + pooled managed Postgres
