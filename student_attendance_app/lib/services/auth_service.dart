@@ -23,14 +23,19 @@ class AuthController extends StateNotifier<AsyncValue<UserSession?>> {
   final TokenStorage _storage;
 
   Future<void> _restore() async {
-    final token = await _storage.accessToken();
-    final raw = await _storage.userJson();
-    if (token != null && raw != null) {
-      state = AsyncValue.data(
-          UserSession.fromJson(jsonDecode(raw) as Map<String, dynamic>));
-    } else {
-      state = const AsyncValue.data(null);
+    try {
+      final token = await _storage.accessToken();
+      final raw = await _storage.userJson();
+      if (token != null && raw != null) {
+        state = AsyncValue.data(
+            UserSession.fromJson(jsonDecode(raw) as Map<String, dynamic>));
+        return;
+      }
+    } catch (_) {
+      // Unreadable storage must not strand the app on a loading spinner:
+      // fall through and start signed out.
     }
+    state = const AsyncValue.data(null);
   }
 
   Future<void> login(String email, String password) async {
@@ -56,7 +61,9 @@ class AuthController extends StateNotifier<AsyncValue<UserSession?>> {
       state = AsyncValue.data(result.user);
     } catch (e) {
       state = const AsyncValue.data(null);
-      rethrow;
+      // Surface the API's message ("Invalid email or password") instead of
+      // leaking a raw DioException dump into the UI.
+      throw ApiClient.toAppException(e);
     }
   }
 

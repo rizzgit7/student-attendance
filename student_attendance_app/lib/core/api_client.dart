@@ -35,9 +35,14 @@ class ApiClient {
 
   Future<void> _onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    final token = await _storage.accessToken();
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+    try {
+      final token = await _storage.accessToken();
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+    } catch (_) {
+      // Never let an unreadable token store block the request itself —
+      // login must still reach the server when secure storage is broken.
     }
     handler.next(options);
   }
@@ -45,7 +50,14 @@ class ApiClient {
   Future<void> _onError(
       DioException error, ErrorInterceptorHandler handler) async {
     if (error.response?.statusCode == 401 && !_refreshing) {
-      final refreshed = await _tryRefresh();
+      bool refreshed = false;
+      try {
+        refreshed = await _tryRefresh();
+      } catch (_) {
+        // A refresh failure must never swallow the original response:
+        // forward the 401 so the UI can show the server's message.
+        refreshed = false;
+      }
       if (refreshed) {
         // replay the original request once with the fresh token
         final opts = error.requestOptions;
@@ -82,7 +94,11 @@ class ApiClient {
       );
       return true;
     } catch (_) {
-      await _storage.clear();
+      try {
+        await _storage.clear();
+      } catch (_) {
+        // Clearing a broken store must not mask the login failure.
+      }
       return false;
     } finally {
       _refreshing = false;
