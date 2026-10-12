@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required to reach the API. Flutter injects this automatically for debug
+         builds only; release APKs must declare it explicitly or every request
+         fails at the OS layer with "Failed host lookup" (errno = 7). -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="student_attendance_app"
         android:name="${applicationName}"
