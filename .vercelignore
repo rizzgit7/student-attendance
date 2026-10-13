@@ -5,3 +5,18 @@ instance/
 *.log
 .pytest_cache/
 .vercel/
+
+# Local-only artifacts. venv/ alone is hundreds of MB and dist/ duplicates
+# the 53 MB APK already published under public/ — uploading either can blow
+# past Vercel's bundle limit and fail the build.
+venv/
+.venv/
+dist/
+build/
+node_modules/
+
+# Working notes, not runtime code.
+blueprint_extracted.txt
+teacher attendance
+ai tool
+sync_web.py
