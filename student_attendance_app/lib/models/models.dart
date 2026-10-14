@@ -151,6 +151,7 @@ class TeacherSession {
     required this.codeSecondsLeft,
     required this.codeValid,
     required this.checkinCutoff,
+    this.roster = const [],
   });
 
   final int id;
@@ -165,6 +166,10 @@ class TeacherSession {
   final bool codeValid;
   final DateTime checkinCutoff;
 
+  /// Everyone enrolled in the class with their mark — only the live
+  /// session endpoint sends it, so the teacher sees who is actually here.
+  final List<RosterEntry> roster;
+
   factory TeacherSession.fromJson(Map<String, dynamic> json) =>
       TeacherSession(
         id: json['id'] as int,
@@ -178,6 +183,42 @@ class TeacherSession {
         codeSecondsLeft: (json['code_seconds_left'] as num?)?.toInt() ?? 0,
         codeValid: (json['code_valid'] ?? false) as bool,
         checkinCutoff: DateTime.parse(json['checkin_cutoff'] as String),
+        roster: (json['roster'] as List?)
+                ?.map((e) => RosterEntry.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            const [],
+      );
+}
+
+/// One student in a session's roll call.
+class RosterEntry {
+  const RosterEntry({
+    required this.studentId,
+    required this.rollNo,
+    required this.fullName,
+    required this.status,
+    this.recordedAt,
+    required this.isCorrected,
+  });
+
+  final int studentId;
+  final String rollNo;
+  final String? fullName;
+  final String status; // PRESENT | LATE | NOT_MARKED
+  final DateTime? recordedAt;
+  final bool isCorrected;
+
+  bool get marked => status != 'NOT_MARKED';
+
+  factory RosterEntry.fromJson(Map<String, dynamic> json) => RosterEntry(
+        studentId: json['student_id'] as int,
+        rollNo: (json['roll_no'] ?? '') as String,
+        fullName: json['full_name'] as String?,
+        status: (json['status'] ?? 'NOT_MARKED') as String,
+        recordedAt: json['recorded_at'] == null
+            ? null
+            : DateTime.parse(json['recorded_at'] as String),
+        isCorrected: (json['is_corrected'] ?? false) as bool,
       );
 }
 
@@ -189,6 +230,71 @@ class Labeled {
   factory Labeled.fromJson(Map<String, dynamic> json) => Labeled(
         id: json['id'] as int,
         name: json['name'] as String,
+      );
+}
+
+/// GET /teacher/options — pick-lists plus the signed-in staff's assignments.
+///
+/// The API rejects a session with 403 unless the teacher is assigned to that
+/// exact subject+section, so the UI must only offer combinations in here.
+class StaffOptions {
+  const StaffOptions({
+    required this.sections,
+    required this.subjects,
+    required this.assignments,
+    required this.isAdmin,
+  });
+
+  final List<Labeled> sections;
+  final List<Labeled> subjects;
+  final List<AssignedPair> assignments;
+  final bool isAdmin;
+
+  /// Admins bypass the assignment check, teachers do not.
+  List<Labeled> get teachableSections => isAdmin
+      ? sections
+      : sections
+          .where((s) => assignments.any((a) => a.sectionId == s.id))
+          .toList();
+
+  /// Subjects that may be started for [sectionId]. Without a section the
+  /// full set the staff member is assigned to is returned.
+  List<Labeled> subjectsFor(int? sectionId) {
+    if (isAdmin) return subjects;
+    if (sectionId == null) {
+      return subjects
+          .where((s) => assignments.any((a) => a.subjectId == s.id))
+          .toList();
+    }
+    return subjects
+        .where((s) => assignments
+            .any((a) => a.subjectId == s.id && a.sectionId == sectionId))
+        .toList();
+  }
+
+  factory StaffOptions.fromJson(Map<String, dynamic> json) => StaffOptions(
+        sections: (json['sections'] as List)
+            .map((e) => Labeled.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        subjects: (json['subjects'] as List)
+            .map((e) => Labeled.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        assignments: (json['assignments'] as List)
+            .map((e) => AssignedPair.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        isAdmin: (json['is_admin'] ?? false) as bool,
+      );
+}
+
+/// Teacher → subject ↔ section binding (§6).
+class AssignedPair {
+  const AssignedPair({required this.subjectId, required this.sectionId});
+  final int subjectId;
+  final int sectionId;
+
+  factory AssignedPair.fromJson(Map<String, dynamic> json) => AssignedPair(
+        subjectId: json['subject_id'] as int,
+        sectionId: json['section_id'] as int,
       );
 }
 

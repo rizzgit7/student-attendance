@@ -56,7 +56,32 @@ def _can_teach(user, subject_id, section_id):
     ).first() is not None
 
 
-def _session_json(session, include_code=False, now=None):
+def _roster_json(session):
+    """Every student enrolled in the session's section, with their mark.
+
+    Unmarked students are returned too, so the teacher can see who has *not*
+    checked in rather than only a bare count.
+    """
+    records = {
+        r.student_id: r
+        for r in AttendanceRecord.query.filter_by(session_id=session.id).all()
+    }
+    rows = []
+    for student in session.section.students:
+        record = records.get(student.id)
+        rows.append({
+            "student_id": student.id,
+            "roll_no": student.roll_no,
+            "full_name": student.user.full_name if student.user else None,
+            "status": record.status if record else "NOT_MARKED",
+            "recorded_at": record.recorded_at.isoformat() if record else None,
+            "is_corrected": bool(record.is_corrected) if record else False,
+        })
+    rows.sort(key=lambda r: r["roll_no"] or "")
+    return rows
+
+
+def _session_json(session, include_code=False, now=None, roster=False):
     now = now or utcnow()
     records = AttendanceRecord.query.filter_by(session_id=session.id).all()
     present = sum(1 for r in records if r.status == MarkStatus.PRESENT)
@@ -89,6 +114,8 @@ def _session_json(session, include_code=False, now=None):
     }
     if include_code:
         payload["code"] = session.code
+    if roster:
+        payload["roster"] = _roster_json(session)
     return payload
 
 
@@ -183,7 +210,10 @@ def create_session():
     )
     db.session.add(session)
     db.session.commit()
-    return jsonify(_session_json(session, include_code=True, now=now)), 201
+    # Include the roster so the roll call shows immediately on start,
+    # not only after the first poll.
+    return jsonify(_session_json(
+        session, include_code=True, now=now, roster=True)), 201
 
 
 @bp.get("/teacher/sessions")
@@ -215,7 +245,8 @@ def get_session(session_id):
     show_code = (
         g.user.role in ADMIN_ROLES or session.teacher.user_id == g.user.id
     )
-    return jsonify(_session_json(session, include_code=show_code))
+    # The live screen polls this endpoint, so it also gets the roll call.
+    return jsonify(_session_json(session, include_code=show_code, roster=True))
 
 
 @bp.post("/teacher/sessions/<int:session_id>/close")

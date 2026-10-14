@@ -105,6 +105,14 @@
                   <div class="col"><h3 class="mb-0" id="live-total">0</h3><small>total marked</small></div>
                   <div class="col"><h3 class="mb-0" id="live-cutoff">–</h3><small>check-in cutoff</small></div>
                 </div>
+                <div class="mt-3" id="live-roster-wrap" style="display:none">
+                  <div class="d-flex justify-content-between small text-secondary mb-1">
+                    <span>Roll call</span><span id="live-roster-count"></span>
+                  </div>
+                  <div class="list-group list-group-flush small"
+                       id="live-roster"
+                       style="max-height:260px;overflow:auto"></div>
+                </div>
                 <button id="close-btn" class="btn btn-danger w-100 mt-3">
                   <i class="bi bi-stop-circle"></i> Close session
                 </button>

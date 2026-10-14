@@ -256,3 +256,55 @@ def test_cross_tenant_report_denied(client, seed):
     resp = client.get(f"/reports/class/{seed['section_b'].id}",
                       headers=_headers(admin))
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Live session roll call (who is actually in the room)
+# ---------------------------------------------------------------------------
+
+def test_live_session_returns_full_roll_call(client, seed):
+    _, teacher = login(client, "teacher@test.com", "TeachPass1!")
+    h = _headers(teacher)
+    session = create_session(client, h,
+                             seed["section1"].id, seed["subject"].id)
+    # the start response carries the roll call too, so no first poll is needed
+    assert "roster" in session
+    assert [r["roll_no"] for r in session["roster"]] == ["R001", "R002"]
+    _, s1 = login(client, "s1@test.com", "StudentPass1!")
+    client.post("/attendance/check-in",
+                json={"code": session["code"], "session_id": session["id"]},
+                headers=_headers(s1))
+
+    view = client.get(f"/teacher/sessions/{session['id']}", headers=h)
+    assert view.status_code == 200
+    roster = view.get_json()["roster"]
+
+    # every enrolled student, ordered by roll number, absentees included
+    assert [r["roll_no"] for r in roster] == ["R001", "R002"]
+    by_roll = {r["roll_no"]: r for r in roster}
+    assert by_roll["R001"]["full_name"] == "Student 1"
+    assert by_roll["R001"]["status"] == "PRESENT"
+    assert by_roll["R001"]["recorded_at"]
+    assert by_roll["R002"]["status"] == "NOT_MARKED"
+    assert by_roll["R002"]["recorded_at"] is None
+    # counts and roster must agree
+    marked = sum(1 for r in roster if r["status"] != "NOT_MARKED")
+    assert marked == view.get_json()["total_marked"]
+
+
+def test_roll_call_stays_off_history_and_is_staff_only(client, seed):
+    _, teacher = login(client, "teacher@test.com", "TeachPass1!")
+    h = _headers(teacher)
+    session = create_session(client, h,
+                             seed["section1"].id, seed["subject"].id)
+
+    # the 100-row history must not carry a roster per session
+    history = client.get("/teacher/sessions", headers=h)
+    assert history.status_code == 200
+    assert "roster" not in history.get_json()["sessions"][0]
+
+    # students may not read the class roll call
+    _, s1 = login(client, "s1@test.com", "StudentPass1!")
+    denied = client.get(f"/teacher/sessions/{session['id']}",
+                        headers=_headers(s1))
+    assert denied.status_code == 403

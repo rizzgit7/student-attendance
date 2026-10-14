@@ -8,6 +8,17 @@ import 'token_storage.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((_) => TokenStorage());
 
+/// Run [body] and rethrow failures as [AppException] carrying the API's own
+/// message, so screens show "You are not assigned to teach this subject here"
+/// instead of a raw DioException dump.
+Future<T> guardApi<T>(Future<T> Function() body) async {
+  try {
+    return await body();
+  } on DioException catch (e) {
+    throw ApiClient.toAppException(e);
+  }
+}
+
 final apiClientProvider = Provider<ApiClient>((ref) {
   final client = ApiClient(ref.watch(tokenStorageProvider));
   ref.onDispose(client.close);

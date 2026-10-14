@@ -186,8 +186,38 @@ function showLive(session) {
   document.getElementById("live-total").textContent = session.total_marked;
   document.getElementById("live-cutoff").textContent =
     (session.checkin_cutoff || "").replace("T", " ").slice(11, 19);
+  renderRoster(session);
   clearInterval(pollTimer);
   pollTimer = setInterval(pollLive, 3000);
+}
+
+// Who is actually in the room: the session endpoint ships the section
+// roster with each student's mark, absentees included.
+function renderRoster(session) {
+  const wrap = document.getElementById("live-roster-wrap");
+  const rows = session.roster || [];
+  if (!rows.length) {
+    wrap.style.display = "none";
+    return;
+  }
+  const meta = {
+    PRESENT: ["Present", "success"],
+    LATE: ["Late", "warning"],
+    NOT_MARKED: ["Not marked", "secondary"],
+  };
+  const marked = rows.filter((r) => r.status !== "NOT_MARKED").length;
+  wrap.style.display = "";
+  document.getElementById("live-roster-count").textContent =
+    `${marked} of ${rows.length} checked in`;
+  document.getElementById("live-roster").innerHTML = rows.map((r) => {
+    const [label, cls] = meta[r.status] || meta.NOT_MARKED;
+    return `<div class="list-group-item d-flex justify-content-between
+      align-items-center px-0 py-1 border-0">
+      <span><span class="text-secondary me-2">${r.roll_no}</span>
+        ${r.full_name || "—"}</span>
+      <span class="badge text-bg-${cls}">${label}</span>
+    </div>`;
+  }).join("");
 }
 
 async function pollLive() {
@@ -199,6 +229,7 @@ async function pollLive() {
   document.getElementById("live-present").textContent = s.present_count;
   document.getElementById("live-late").textContent = s.late_count;
   document.getElementById("live-total").textContent = s.total_marked;
+  renderRoster(s);
   if (!s.code_valid && s.status === "OPEN") {
     document.getElementById("live-code").textContent = "expired";
   }
@@ -315,7 +346,7 @@ document.getElementById("add-class").addEventListener("click", async () => {
     program: { name: document.getElementById("cls-prog").value.trim() || "General" },
   }});
   if (!resp.ok) { toast(resp.data?.message || "Failed", false); return; }
-  toast("Class created");
+  toast("Class created — now create a section and assign a teacher");
   loadAcademics();
 });
 
@@ -325,7 +356,7 @@ document.getElementById("add-section").addEventListener("click", async () => {
     class_id: parseInt(document.getElementById("sec-class").value, 10),
   }});
   if (!resp.ok) { toast(resp.data?.message || "Failed", false); return; }
-  toast("Section created");
+  toast("Section created — assign a teacher below before it can be taught");
   loadAcademics();
 });
 
@@ -334,7 +365,7 @@ document.getElementById("add-subject").addEventListener("click", async () => {
     name: document.getElementById("sub-name").value.trim(),
   }});
   if (!resp.ok) { toast(resp.data?.message || "Failed", false); return; }
-  toast("Subject created");
+  toast("Subject created — assign a teacher below before it can be taught");
   loadAcademics();
 });
 

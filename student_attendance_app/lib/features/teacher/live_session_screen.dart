@@ -167,7 +167,32 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
                           color: Colors.indigo),
                     ],
                   ),
-                  const Spacer(),
+                  // The roster (when the server sends one) takes the
+                  // remaining space instead of this spacer.
+                  if (session.roster.isEmpty) const Spacer(),
+                  if (session.roster.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Roll call',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          '${session.roster.where((e) => e.marked).length} of '
+                          '${session.roster.length} checked in',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        itemCount: session.roster.length,
+                        itemBuilder: (context, i) =>
+                            _RosterTile(entry: session.roster[i]),
+                      ),
+                    ),
+                  ],
                   if (session.status == 'OPEN')
                     FilledButton.icon(
                       style:
@@ -198,5 +223,34 @@ class _Stat extends StatelessWidget {
               fontSize: 36, fontWeight: FontWeight.bold, color: color)),
       Text(label),
     ]);
+  }
+}
+
+class _RosterTile extends StatelessWidget {
+  const _RosterTile({required this.entry});
+
+  final RosterEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (entry.status) {
+      'PRESENT' => ('Present', Colors.green),
+      'LATE' => ('Late', Colors.orange),
+      _ => ('Not marked', Colors.grey),
+    };
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: SizedBox(
+        width: 56,
+        child: Text(entry.rollNo,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+      ),
+      title: Text(entry.fullName ?? '—'),
+      trailing: Text(
+        entry.isCorrected ? '$label *' : label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
   }
 }

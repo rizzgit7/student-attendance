@@ -7,11 +7,11 @@ import '../../models/models.dart';
 import '../../services/auth_service.dart';
 import '../../services/teacher_service.dart';
 
-final sectionsProvider = FutureProvider<List<Labeled>>((ref) =>
-    ref.watch(teacherServiceProvider).sections());
-
-final subjectsProvider = FutureProvider<List<Labeled>>((ref) =>
-    ref.watch(teacherServiceProvider).subjects());
+/// Sections/subjects/assignments the signed-in staff may use. Teachers only
+/// get the pairs they are assigned to, so the pick-lists can never offer a
+/// combination the API answers with 403.
+final staffOptionsProvider = FutureProvider<StaffOptions>((ref) =>
+    ref.watch(teacherServiceProvider).options());
 
 class TeacherHomeScreen extends ConsumerWidget {
   const TeacherHomeScreen({super.key});
