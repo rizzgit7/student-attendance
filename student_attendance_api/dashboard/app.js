@@ -271,10 +271,21 @@ async function loadPeople() {
     (teachers.data?.teachers || []).map((t) => `
       <tr><td>${t.employee_no || ""}</td><td>${t.full_name}</td><td>${t.email}</td></tr>`).join("") ||
     `<tr><td colspan="3" class="text-secondary">None yet</td></tr>`;
-  const assignmentTeachers = await api("/admin/teachers");
+  renderAssignmentTeachers(teachers.data?.teachers || []);
+}
+
+// The assign-teacher picker lives on the Academics tab, so it must be filled
+// there too — otherwise it is blank until the People tab has been opened.
+function renderAssignmentTeachers(teachers) {
   document.getElementById("asg-teacher").innerHTML =
-    (assignmentTeachers.data?.teachers || []).map(
-      (t) => `<option value="${t.id}">${t.full_name}</option>`).join("");
+    `<option value="">Select a teacher…</option>` +
+    teachers.map((t) => `<option value="${t.id}">${t.full_name}</option>`)
+      .join("");
+}
+
+async function loadAssignmentTeachers() {
+  const resp = await api("/admin/teachers");
+  renderAssignmentTeachers(resp.data?.teachers || []);
 }
 
 document.getElementById("add-student").addEventListener("click", async () => {
@@ -308,6 +319,8 @@ document.getElementById("add-teacher").addEventListener("click", async () => {
 
 async function loadAcademics() {
   await loadOptions();
+  // Fill every picker this tab needs, including the teacher list.
+  await loadAssignmentTeachers();
   const classes = await api("/admin/classes");
   document.getElementById("classes-body").innerHTML =
     (classes.data?.classes || []).map((k) => `
@@ -321,7 +334,8 @@ async function loadAcademics() {
   const assignments = await api("/admin/assignments");
   const bySubject = new Map(options.subjects.map((s) => [s.id, s]));
   const assignedKeys = new Set();
-  const rows = (assignments.data?.assignments || []).map((a) => {
+  // let, not const: the loop below appends the unassigned combinations.
+  let rows = (assignments.data?.assignments || []).map((a) => {
     assignedKeys.add(`${a.subject_id}:${a.section_id}`);
     return `<tr><td>${a.subject}</td><td>${bySubject.get(a.subject_id)?.code || ""}</td>
       <td>${a.section}</td><td>${a.teacher}</td>
@@ -370,8 +384,13 @@ document.getElementById("add-subject").addEventListener("click", async () => {
 });
 
 document.getElementById("add-assignment").addEventListener("click", async () => {
+  const teacherId = parseInt(document.getElementById("asg-teacher").value, 10);
+  if (!teacherId) {
+    toast("Pick a teacher first", false);
+    return;
+  }
   const resp = await api("/admin/assignments", { method: "POST", body: {
-    teacher_id: parseInt(document.getElementById("asg-teacher").value, 10),
+    teacher_id: teacherId,
     subject_id: parseInt(document.getElementById("asg-subject").value, 10),
     section_id: parseInt(document.getElementById("asg-section").value, 10),
   }});
